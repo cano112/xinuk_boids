@@ -1,8 +1,9 @@
 package pl.edu.agh.boids.model.parallel
 
 import pl.edu.agh.boids.config.BoidsConfig
+import pl.edu.agh.boids.model.BoidCell
 import pl.edu.agh.boids.simulation.BoidsMetrics
-import pl.edu.agh.xinuk.model.{GridPart, Obstacle, SmellingCell}
+import pl.edu.agh.xinuk.model.{EmptyCell, GridPart, Obstacle, SmellingCell}
 import pl.edu.agh.xinuk.model.parallel.ConflictResolver
 
 object BoidPositionConflictResolver extends ConflictResolver[BoidsConfig] {
@@ -13,6 +14,14 @@ object BoidPositionConflictResolver extends ConflictResolver[BoidsConfig] {
     (current, incoming) match {
       case (Obstacle, _) =>
         (Obstacle, BoidsMetrics.empty())
+      case (EmptyCell(_), BoidCell(smell)) =>
+        (BoidCell(smell), BoidsMetrics.empty())
+      case (EmptyCell(currentSmell), EmptyCell(incomingSmell)) =>
+        (EmptyCell(currentSmell + incomingSmell), BoidsMetrics.empty())
+      case (BoidCell(smell), EmptyCell(_)) =>
+        (BoidCell(smell), BoidsMetrics.empty())
+      case (BoidCell(currentSmell), BoidCell(incomingSmell)) =>
+        (BoidCell(incomingSmell), BoidsMetrics.empty())
       case (x, y) => throw new UnsupportedOperationException(s"Unresolved conflict: $x with $y")
     }
   }

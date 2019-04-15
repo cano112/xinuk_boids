@@ -14,4 +14,6 @@ final case class BoidsConfig(
                              signalSpeedRatio: Int,
                              iterationsNumber: Long,
 
-                             boidsCount: Int) extends XinukConfig
+                             delayMillis: Long,
+                             boidsCount: Int,
+                             boidStepSize: Int) extends XinukConfig
