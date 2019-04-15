@@ -9,8 +9,9 @@ final case class BoidsConfig(
                              signalAttenuationFactor: Double,
                              workersRoot: Int,
                              shardingMod: Int,
-
                              guiType: GuiType,
                              isSupervisor: Boolean,
                              signalSpeedRatio: Int,
-                             iterationsNumber: Long) extends XinukConfig
+                             iterationsNumber: Long,
+
+                             boidsCount: Int) extends XinukConfig
