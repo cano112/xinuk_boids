@@ -1,5 +1,8 @@
 package pl.edu.agh.boids.algorithm
 
+import com.avsystem.commons
+import com.avsystem.commons.SharedExtensions._
+import com.avsystem.commons.misc.Opt
 import pl.edu.agh.boids.config.BoidsConfig
 import pl.edu.agh.boids.model.BoidCell
 import pl.edu.agh.boids.simulation.BoidsMetrics
@@ -18,7 +21,7 @@ final class BoidsMovesController(bufferZone: TreeSet[(Int, Int)])(implicit confi
     for(i <- 0 until config.boidsCount) {
       val randomX = randomizeCoord()
       val randomY = randomizeCoord()
-      grid.cells(randomX)(randomY) = BoidCell.create(Signal.Zero)
+      grid.cells(randomX)(randomY) = BoidCell.create(Signal(1))
     }
 
     val metrics = BoidsMetrics.empty()
@@ -36,20 +39,46 @@ final class BoidsMovesController(bufferZone: TreeSet[(Int, Int)])(implicit confi
       newGrid.cells(x)(y) = cell
     }
 
+    def calculatePossibleDestinations(cell: GridPart, x: Int, y: Int, grid: Grid): Iterator[(Int, Int, GridPart)] = {
+      val neighbourCellCoordinates = Grid.neighbourCellCoordinates(x, y)
+      Grid.SubcellCoordinates
+        .map { case (i, j) => cell.smell(i)(j) }
+        .zipWithIndex
+        .sorted(implicitly[Ordering[(Signal, Int)]].reverse)
+        .iterator
+        .map { case (_, idx) =>
+          val (i, j) = neighbourCellCoordinates(idx)
+          (i, j, grid.cells(i)(j))
+        }
+    }
+
+    def selectDestinationCell(possibleDestinations: Iterator[(Int, Int, GridPart)], newGrid: Grid): commons.Opt[(Int, Int, GridPart)] = {
+      possibleDestinations
+        .map { case (i, j, current) => (i, j, current, newGrid.cells(i)(j)) }
+        .collectFirstOpt {
+          case (i, j, currentCell@EmptyCell(_), EmptyCell(_)) =>
+            (i, j, currentCell)
+          case (i, j, currentCell@BufferCell(EmptyCell(_)), BufferCell(EmptyCell(_))) =>
+            (i, j, currentCell)
+        }
+    }
+
     def moveCell(x: Int, y: Int, cell: GridPart): Unit = {
-      val randomX = x + randomSignum * config.boidStepSize
-      val randomY = y + randomSignum * config.boidStepSize
-      val destination = (cropCoordOnBorder(randomX), cropCoordOnBorder(randomY))
+      val destinations = calculatePossibleDestinations(cell, x, y, grid)
+      val destination = selectDestinationCell(destinations, newGrid)
       val vacatedCell = EmptyCell(cell.smell)
-      val occupiedCell = BoidCell.create(Signal.Zero)
-      newGrid.cells(destination._1)(destination._2) match {
-        case EmptyCell(_) =>
+      val occupiedCell = BoidCell.create(Signal(1))
+
+      destination match {
+        case Opt((i, j, EmptyCell(_))) =>
           newGrid.cells(x)(y) = vacatedCell
-          newGrid.cells(destination._1)(destination._2) = occupiedCell
-        case BufferCell(EmptyCell(_)) =>
+          newGrid.cells(i)(j) = occupiedCell
+        case Opt((i, j, BufferCell(EmptyCell(_)))) =>
           newGrid.cells(x)(y) = vacatedCell
-          newGrid.cells(destination._1)(destination._2) = BufferCell(occupiedCell)
-        case _ =>
+          newGrid.cells(i)(j) = BufferCell(occupiedCell)
+        case Opt((i, j, notEmpty)) =>
+          throw new RuntimeException(s"Boid selected not empty destination ($i,$j): $notEmpty")
+        case Opt.Empty =>
           newGrid.cells(x)(y) = occupiedCell
       }
     }

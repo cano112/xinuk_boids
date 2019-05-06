@@ -14,14 +14,14 @@ object BoidPositionConflictResolver extends ConflictResolver[BoidsConfig] {
     (current, incoming) match {
       case (Obstacle, _) =>
         (Obstacle, BoidsMetrics.empty())
-      case (EmptyCell(_), BoidCell(smell)) =>
-        (BoidCell(smell), BoidsMetrics.empty())
+      case (EmptyCell(currentSmell), BoidCell(incomingSmell)) =>
+        (BoidCell(currentSmell + incomingSmell), BoidsMetrics.empty())
       case (EmptyCell(currentSmell), EmptyCell(incomingSmell)) =>
         (EmptyCell(currentSmell + incomingSmell), BoidsMetrics.empty())
-      case (BoidCell(smell), EmptyCell(_)) =>
-        (BoidCell(smell), BoidsMetrics.empty())
+      case (BoidCell(currentSmell), EmptyCell(incomingSmell)) =>
+        (BoidCell(currentSmell + incomingSmell), BoidsMetrics.empty())
       case (BoidCell(currentSmell), BoidCell(incomingSmell)) =>
-        (BoidCell(incomingSmell), BoidsMetrics.empty())
+        (BoidCell(currentSmell + incomingSmell), BoidsMetrics.empty())
       case (x, y) => throw new UnsupportedOperationException(s"Unresolved conflict: $x with $y")
     }
   }
