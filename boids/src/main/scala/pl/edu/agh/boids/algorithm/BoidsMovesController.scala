@@ -9,6 +9,7 @@ import pl.edu.agh.boids.simulation.BoidsMetrics
 import pl.edu.agh.xinuk.algorithm.MovesController
 import pl.edu.agh.xinuk.model._
 
+import scala.collection.immutable
 import scala.collection.immutable.TreeSet
 import scala.util.Random
 
@@ -39,20 +40,28 @@ final class BoidsMovesController(bufferZone: TreeSet[(Int, Int)])(implicit confi
       newGrid.cells(x)(y) = cell
     }
 
-    def calculatePossibleDestinations(cell: GridPart, x: Int, y: Int, grid: Grid): Iterator[(Int, Int, GridPart)] = {
+    def calculatePossibleDestinations(cell: GridPart, x: Int, y: Int, grid: Grid): immutable.Seq[(Int, Int, GridPart)] = {
       val neighbourCellCoordinates = Grid.neighbourCellCoordinates(x, y)
+      val totalSmell = Grid.SubcellCoordinates
+        .map { case (i, j) => cell.smell(i)(j).value }
+        .sum
+
       Grid.SubcellCoordinates
         .map { case (i, j) => cell.smell(i)(j) }
         .zipWithIndex
-        .sorted(implicitly[Ordering[(Signal, Int)]].reverse)
-        .iterator
+        .filter {case (smell, _) => smell.value / totalSmell < randomGen.nextDouble() }
+        .sortWith((a, b) => {
+          val coeffA = if (a._2 == config.windDirection) config.windCoeff else 1
+          val coeffB = if (b._2 == config.windDirection) config.windCoeff else 1
+          a._1.value * coeffA> b._1.value * coeffB
+        })
         .map { case (_, idx) =>
           val (i, j) = neighbourCellCoordinates(idx)
           (i, j, grid.cells(i)(j))
         }
     }
 
-    def selectDestinationCell(possibleDestinations: Iterator[(Int, Int, GridPart)], newGrid: Grid): commons.Opt[(Int, Int, GridPart)] = {
+    def selectDestinationCell(possibleDestinations: Seq[(Int, Int, GridPart)], newGrid: Grid): commons.Opt[(Int, Int, GridPart)] = {
       possibleDestinations
         .map { case (i, j, current) => (i, j, current, newGrid.cells(i)(j)) }
         .collectFirstOpt {
@@ -95,13 +104,5 @@ final class BoidsMovesController(bufferZone: TreeSet[(Int, Int)])(implicit confi
     dynamicCells.foreach({ case (x, y, cell) => moveCell(x, y, cell) })
 
     (newGrid, BoidsMetrics.empty())
-  }
-
-  private def randomSignum: Int = randomGen.nextInt(3) - 1
-
-  private def cropCoordOnBorder(coord: Int): Int = {
-    if(coord >= config.gridSize) return config.gridSize - 1
-    if(coord < 0) return 0
-    coord
   }
 }

@@ -16,4 +16,5 @@ final case class BoidsConfig(
 
                              delayMillis: Long,
                              boidsCount: Int,
-                             boidStepSize: Int) extends XinukConfig
+                             windDirection: Int,
+                             windCoeff: Int) extends XinukConfig
