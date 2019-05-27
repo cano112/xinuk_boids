@@ -53,7 +53,7 @@ final class BoidsMovesController(bufferZone: TreeSet[(Int, Int)])(implicit confi
         .sortWith((a, b) => {
           val coeffA = if (a._2 == config.windDirection) config.windCoeff else 1
           val coeffB = if (b._2 == config.windDirection) config.windCoeff else 1
-          a._1.value * coeffA> b._1.value * coeffB
+          a._1.value * coeffA > b._1.value * coeffB
         })
         .map { case (_, idx) =>
           val (i, j) = neighbourCellCoordinates(idx)
@@ -96,12 +96,15 @@ final class BoidsMovesController(bufferZone: TreeSet[(Int, Int)])(implicit confi
       x <- 0 until config.gridSize
       y <- 0 until config.gridSize
     } yield (x, y, grid.cells(x)(y))).partition({
-      case (_, _, BoidCell(_)) => true
+      case (_, _, BoidCell(_, _)) => true
       case (_, _, _) => false
     })
 
     staticCells.foreach({ case (x, y, cell) => copyCell(x, y, cell) })
-    dynamicCells.foreach({ case (x, y, cell) => moveCell(x, y, cell) })
+    dynamicCells.foreach({
+      case (x, y, cell: BoidCell) => Array.range(0, cell.boidsCount).foreach({ boid => moveCell(x, y, cell)})
+      case (_, _, _) =>
+    })
 
     (newGrid, BoidsMetrics.empty())
   }

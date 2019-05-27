@@ -14,14 +14,15 @@ object BoidPositionConflictResolver extends ConflictResolver[BoidsConfig] {
     (current, incoming) match {
       case (Obstacle, _) =>
         (Obstacle, BoidsMetrics.empty())
-      case (EmptyCell(currentSmell), BoidCell(incomingSmell)) =>
-        (BoidCell(currentSmell + incomingSmell), BoidsMetrics.empty())
+      case (EmptyCell(currentSmell), BoidCell(incomingSmell, incomingBoids)) =>
+        (BoidCell(currentSmell + incomingSmell, incomingBoids), BoidsMetrics.empty())
       case (EmptyCell(currentSmell), EmptyCell(incomingSmell)) =>
         (EmptyCell(currentSmell + incomingSmell), BoidsMetrics.empty())
-      case (BoidCell(currentSmell), EmptyCell(incomingSmell)) =>
-        (BoidCell(currentSmell + incomingSmell), BoidsMetrics.empty())
-      case (BoidCell(currentSmell), BoidCell(incomingSmell)) =>
-        (BoidCell(currentSmell + incomingSmell), BoidsMetrics.empty())
+      case (BoidCell(currentSmell, currentBoids), EmptyCell(incomingSmell)) =>
+        (BoidCell(currentSmell + incomingSmell, currentBoids), BoidsMetrics.empty())
+      case (current: BoidCell, incoming: BoidCell) =>
+        val boid = BoidCell(current.smell + incoming.smell, current.boidsCount + incoming.boidsCount)
+        (boid, BoidsMetrics.empty())
       case (x, y) => throw new UnsupportedOperationException(s"Unresolved conflict: $x with $y")
     }
   }
